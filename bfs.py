@@ -47,14 +47,17 @@ class Graph:
         found_obs = False
         for connection, obs in self.adjacency_matrix[vertex].iteritems():
             if obs == observations[current_index]:
-                print connection
                 found_obs = True
                 current_list.append(vertex)
-                return self._search(connection, observations, current_index + 1, current_list)
+                result = self._search(connection, observations, current_index + 1, current_list)
+                if result == 'NO':
+                    current_list = []
+                    continue
+                return result
         if not found_obs:
             return 'NO'
 
 
 if __name__  == "__main__":
-    g = Graph([['A', 'B', 'o6'], ['B', 'D', 'o5'], ['C', 'D', 'o2'], ['D', 'E', 'o3'], ['A', 'C', 'o1'], ['C', 'B', 'o3'], ['B', 'A', 'o1']])
-    print g.breadth_first_search('A', ['o1', 'o3', 'o1'])
+    g = Graph([['A', 'B', 'o1'], ['B', 'D', 'o5'], ['C', 'D', 'o2'], ['D', 'E', 'o3'], ['A', 'C', 'o1'], ['C', 'B', 'o3'], ['B', 'A', 'o1']])
+    g.breadth_first_search('A', ['o1', 'o5', 'o3'])
