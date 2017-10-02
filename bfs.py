@@ -11,6 +11,7 @@ class Graph:
         """
         self.adjacency_matrix = {}
         self._get_adjacency_matrix(relation)
+        self.pattern = {}
 
     def _get_adjacency_matrix(self, relation):
         """
@@ -35,13 +36,23 @@ class Graph:
         :param observations: pattern that needs to be matched.
         :return: list of vertices describing the path if such a path exists else `NO`.
         """
-
+        paths = []
         current_list = []
-        return self._search(initial_vertex, observations, 0, current_list)
+        return self._search(initial_vertex, observations, 0, current_list, paths)
 
-    def _search(self, vertex, observations, current_index, current_list):
+    def _search(self, vertex, observations, current_index, current_list, paths):
         if current_index == len(observations):
             current_list.append(vertex)
+            paths.append(current_list)
+
+            for i in range(0, len(observations)):
+                self.pattern[current_list[i]] = [observations[i:], current_list[i:]]
+
+            return current_list
+
+        if vertex in self.pattern and observations[0: current_index] + self.pattern[vertex][0] == observations:
+            current_list = current_list + self.pattern[vertex][1]
+            paths.append(current_list)
             return current_list
 
         found_obs = False
@@ -49,15 +60,17 @@ class Graph:
             if obs == observations[current_index]:
                 found_obs = True
                 current_list.append(vertex)
-                result = self._search(connection, observations, current_index + 1, current_list)
+                result = self._search(connection, observations, current_index + 1, current_list, paths)
+                current_list = []
                 if result == 'NO':
-                    current_list = []
                     continue
-                return result
+
         if not found_obs:
             return 'NO'
 
+        return paths
+
 
 if __name__  == "__main__":
-    g = Graph([['A', 'B', 'o1'], ['B', 'D', 'o5'], ['C', 'D', 'o2'], ['D', 'E', 'o3'], ['A', 'C', 'o1'], ['C', 'B', 'o3'], ['B', 'A', 'o1']])
-    g.breadth_first_search('A', ['o1', 'o5', 'o3'])
+    g = Graph([['A', 'B', 'o1'], ['B', 'D', 'o5'], ['C', 'D', 'o5'], ['D', 'E', 'o3'], ['A', 'C', 'o1'], ['C', 'B', 'o3'], ['B', 'A', 'o1']])
+    print g.breadth_first_search('A', ['o1', 'o5', 'o3'])
