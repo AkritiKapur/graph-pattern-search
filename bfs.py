@@ -28,84 +28,62 @@ class Graph:
             if x[1] not in self.adjacency_matrix:
                 self.adjacency_matrix[x[1]] = {}
 
-    def breadth_first_search(self, initial_vertex, observations):
-        """
-            Performs breadth first search from the initial vertex to the rest of the graph
-            to find the pattern of observations
-        :param initial_vertex: vertex from where search starts.
-        :param observations: pattern that needs to be matched.
-        :return: list of list of vertices describing the path if such a path exists else `NO`.
-        """
-        paths = []
-        current_list = []
-        return self._search(initial_vertex, observations, 0, current_list, paths)
+def breadth_first_search(self, initial_vertex, observations):
+    """
+        Performs breadth first search from the initial vertex to the rest of the graph
+        to find the pattern of observations
+    :param initial_vertex: vertex from where search starts.
+    :param observations: pattern that needs to be matched.
+    :return: list of list of vertices describing the path if such a path exists else `NO`.
+    """
+    return self._dp_search(initial_vertex, observations, 0)
 
-    def _search(self, vertex, observations, current_index, current_list, paths):
-        """
-        :param vertex: current vertex being examined
-        :param observations: {List(observations)} pattern of observations that need to be matched
-            to the edges of the graph
-        :param current_index: {int} index of the observation to be matched
-        :param current_list: {List(vertex)} current list of path being examined
-        :param paths: {List(paths)} stores all the paths that match the observation pattern
-        :return: List of paths that match the pattern if there are paths else 'NO'.
-        """
+def _dp_search(self, vertex, observation, current_index):
 
-        # if the path being examined is a match add it to the `paths` list.
-        if current_index == len(observations):
-            current_list.append(vertex)
-            paths.append(current_list)
+    # if the observation is a match returns the end vertice of the match.
+    # for example, for observations - o1,o2,o3 and edges A, B, C, D returns D
+    if current_index == len(observation):
+        return [vertex]
 
-            """
-            memoization to store pattern for each vertex so that the next time this vertex is examined,
-            we can come to know the observation pattern ahead of it and if it is a match,
-            the vertex and it's children are not examined again.
-            :example: if path [A, B, C, D] matches observation say [o1, o2, o3], then it is stored in the form,
-            pattern = {
-                'A': [[o1,o2,o3], [B, C, D]]
-                'B': [[o2,o3], [C, D]]
-                'C': [[o3], [D]]
-            }
-            """
-            for i in range(0, len(observations)):
-                self.pattern[current_list[i]] = [observations[i:], current_list[i:]]
+    # if the vertex already exists in the dictionary with the observation pattern needed,
+    # does not traverse the children instead returns the value.
+    # exmaple : pattern = { 'A':
+    if vertex in self.pattern and ','.join(observation[current_index:]) in self.pattern[vertex]:
+        return self.pattern[vertex][','.join(observation[current_index:])]
 
-            return current_list
+    # if vertex does not exist in pattern dictionary, creates a key for vertex.
+    # for example: For observation pattern: o1, o2, o3 and vertex A (initial vertex),
+    # pattern = {'A': {'o1,o5,o3': ['ACDE', 'ACDF', 'ABDE', 'ABDF']},
+    #            'C': {'o5,o3': ['CDE', 'CDF']},
+    #            'B': {'o5,o3': ['BDE', 'BDF']},
+    #            'D': {'o3': ['DE', 'DF']}}
+    if vertex not in self.pattern:
+        self.pattern[vertex] = {','.join(observation[current_index:]): []}
 
-        """
-            checks if the current vertex is present in the pattern dict, if it is present and the observation pattern 
-            till now + observation pattern that is stored for the vertex is a match to the pattern provided,  
-            then adds it to 'path'
-            :example: continuing from the example above, if vertex C is being examined,
-            the observation till now is [o1,o2] and the path till now is,
-            [A, D] then, we check in the pattern dict, and find that [o1,o2] + [o3] is a match to our pattern.
-        """
-        if vertex in self.pattern and observations[0: current_index] + self.pattern[vertex][0] == observations:
-            current_list = current_list + self.pattern[vertex][1]
-            paths.append(current_list)
-            return current_list
+    found_obs = False
+    result = 'NO'
 
-        found_obs = False
+    # recurses through the children to find the pattern.
+    for connection, obs in self.adjacency_matrix[vertex].iteritems():
+        if obs == observation[current_index]:
+            found_obs = True
+            result = self._dp_search(connection, observation, current_index+1)
 
-        # recurses through the children to match pattern
-        for connection, obs in self.adjacency_matrix[vertex].iteritems():
-            if obs == observations[current_index]:
-                found_obs = True
-                current_list.append(vertex)
-                result = self._search(connection, observations, current_index + 1, current_list, paths)
-                current_list = []
+            if result == 'NO':
+                continue
 
-                # if no pattern is found continues for children.
-                if result == 'NO':
-                    continue
+            # creates pattern dictionary in the form described above.
+            if result != 'NO':
+                for r in result:
+                    self.pattern[vertex][','.join(observation[current_index:])].append(vertex + r)
 
-        # if the pattern is not found returns `No`
-        if not found_obs:
-            return 'NO'
+    # if the pattern is not found returns `No`
+    if not found_obs or result == 'NO':
+        return 'NO'
 
-        return paths
-
+    return self.pattern[vertex][','.join(observation[current_index:])]
 
 if __name__  == "__main__":
-    g = Graph([['A', 'B', 'o1'], ['B', 'D', 'o5'], ['C', 'D', 'o5'], ['D', 'E', 'o3'], ['A', 'C', 'o1'], ['C', 'B', 'o3'], ['B', 'A', 'o1']])
+    g = Graph([['A', 'B', 'o1'], ['B', 'D', 'o5'], ['C', 'D', 'o5'], ['D', 'E', 'o3'], ['A', 'C', 'o1'],
+               ['C', 'B', 'o3'], ['B', 'A', 'o1'], ['D', 'F', 'o3'], ['D', 'E', 'o3']])
     print g.breadth_first_search('A', ['o1', 'o5', 'o3'])
