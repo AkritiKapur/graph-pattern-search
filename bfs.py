@@ -11,6 +11,7 @@ class Graph:
         """
         self.adjacency_matrix = {}
         self._get_adjacency_matrix(relation)
+        self.pattern = {}
 
     def _get_adjacency_matrix(self, relation):
         """
@@ -36,68 +37,60 @@ class Graph:
         :return: list of vertices describing the path if such a path exists else `NO`.
         """
 
-        current_list = []
-        most_probable_path = []
-        max_probability = 0
-        current_probability = 0
-        most_probable_path, _ = self._search(initial_vertex, observations, 0, current_list,
-                                             most_probable_path, current_probability, max_probability)
-        return most_probable_path
+        return self._dp_search(initial_vertex, observations, 0)['pattern']
 
-    def _search(self, vertex, observations, current_index, current_list, most_probable_path,
-                current_probability, max_probability):
-        """
-        :param vertex: current vertex being examined
-        :param observations: {List(observations)} pattern of observations that need to be matched
-            to the edges of the graph
-        :param current_index: {int} index of the observation to be matched
-        :param current_list: {List(vertex)} current list of path being examined
-        :param most_probable_path: {List(vertex)} most probable path till now
-        :param current_probability: the current probability of the path edges currently being examined.
-        :param max_probability: maximum probability of the sequence occuring till now.
-        :return: most probable path and it's probability if a path is found else returns NO.
-        """
-        if current_index == len(observations):
-            # if path is a match to the pattern of observations,
-            # then compare it's probability and check if it is the most probable path.
-            current_list.append(vertex)
-            if current_probability > max_probability:
-                max_probability = current_probability
-                most_probable_path = current_list
-            return most_probable_path, max_probability
+    def _dp_search(self, vertex, observation, current_index):
+
+        # if the observation is a match returns the end vertice of the match.
+        # for example, for observations - o1,o2,o3 and edges A, B, C, D returns D
+        if current_index == len(observation):
+            return {'pattern': vertex, 'max_probability': 0}
+
+        # if the vertex already exists in the dictionary with the observation pattern needed,
+        # does not traverse the children instead returns the value.
+        # for example: For observation pattern: o1, o2, o3 and vertex D ,
+        # suppose two paths exist from D, DF with 0.5 and DE with 0.2 then DF is stored in the dictionary.
+        # pattern = {'D': {'o3': ['pattern': 'DF', 'max_probability': 0.5]}}
+        if vertex in self.pattern and ','.join(observation[current_index:]) in self.pattern[vertex]:
+            return self.pattern[vertex][','.join(observation[current_index:])]
+
+        # if vertex does not exist in pattern dictionary, creates a key for vertex.
+        if vertex not in self.pattern:
+            self.pattern[vertex] = {','.join(observation[current_index:]): {'pattern': '', 'max_probability': 0}}
 
         found_obs = False
+        result = 'NO'
 
-        # check for all children of the current vertex if they match the observation
-        # currently being examined.
+        # recurses through the children to find the pattern.
         for connection, obs in self.adjacency_matrix[vertex].iteritems():
-            if obs[0] == observations[current_index]:
-
+            if obs[0] == observation[current_index]:
                 found_obs = True
-                current_list.append(vertex)
+                result = self._dp_search(connection, observation, current_index+1)
 
-                # update the probability of the path.
-                current_probability += obs[1]
-                most_probable_path, max_probability = self._search(connection, observations, current_index + 1,
-                                                                   current_list, most_probable_path,
-                                                                   current_probability, max_probability)
-
-                # reinitialize variables for new paths to be discovered.
-                current_probability = 0
-                current_list = []
-
-                # if the path is not a match then check for the next child.
-                if max_probability == 'NO':
+                if result == 'NO':
                     continue
 
-        # if no match is found
-        if not found_obs:
-            return 'NO', 'NO'
+                current_probability = self.pattern[vertex][','.join(observation[current_index:])]['max_probability']
 
-        return most_probable_path, max_probability
+                # creates pattern dictionary in the form described above.
+                if result != 'NO':
+                    if current_probability == 0:
+                        self.pattern[vertex][','.join(observation[current_index:])]['max_probability'] = obs[1]
+                        self.pattern[vertex][','.join(observation[current_index:])]['pattern'] = vertex + result['pattern']
+                    elif current_probability < obs[1]:
+                        self.pattern[vertex][','.join(observation[current_index:])]['max_probability'] = \
+                            obs[1] if result['max_probability'] == 0 else obs[1] * result['max_probability']
+                        self.pattern[vertex][','.join(observation[current_index:])]['pattern'] = vertex + result['pattern']
+
+        # if the pattern is not found returns `No`
+        if not found_obs or result == 'NO':
+            return 'NO'
+
+        return self.pattern[vertex][','.join(observation[current_index:])]
 
 
 if __name__  == "__main__":
     g = Graph([['A', 'B', 'o1', 0.9], ['B', 'D', 'o5', 0.8], ['C', 'D', 'o5', 1], ['D', 'E', 'o3', 0.5],
-               ['A', 'C', 'o1', 0.1], ['C', 'B', 'o3', 0.5], ['B', 'A', 'o1', 0.5]])
-    print g.breadth_first_search('A', ['o1', 'o9', 'o3'])
+               ['A', 'C', 'o1', 0.1], ['C', 'B', 'o3', 0.5], ['B', 'A', 'o1', 0.5], ['D', 'F', 'o3', 0.2],
+               ['D', 'E', 'o3', 0.5]])
+    print g.breadth_first_search('A', ['o1', 'o5', 'o3'])
